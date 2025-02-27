@@ -1,0 +1,337 @@
+USE HR_Analytics;
+SELECT * FROM Employee;
+
+-- Question 1. Display the Employee Number, Department, and JobRole for all employees.
+
+SELECT EmployeeNumber, AttritionRisk, Department, JobRole
+FROM Employee;
+
+-- Question 2. What is the average JobSatisfaction level across all employees?
+
+SELECT AVG(JobSatisfaction) AS Avg_JobSatisfaction
+FROM Employee;
+
+-- Question 3 (a). Which departments have an average PerformanceRating greater than 4?
+
+SELECT Department, ROUND(AVG(PerformanceRating),2) AS Avg_PerformanceRating
+FROM Employee
+GROUP BY Department
+HAVING AVG(PerformanceRating) > 3.15;
+
+-- Question 3 (b). Which departments have an average PerformanceRating greater than 4?
+
+SELECT Department, ROUND(AVG(AttritionRisk), 3) AS Avg_AttritionRisk
+FROM Employee
+GROUP BY Department
+HAVING AVG(AttritionRisk) > 2;
+
+-- Question 4.  Determine the number of employees in each category of attrition risk 
+-- based on low (>= 3) and high (< 2) levels of JobSatisfaction and WorkLifeBalance.
+
+SELECT JobSatisfaction, WorkLifeBalance, COUNT(*) AS Num_Employees,
+       CASE
+           WHEN JobSatisfaction >= 3 AND WorkLifeBalance >= 3 THEN 'Low Risk'
+           WHEN JobSatisfaction < 2 AND WorkLifeBalance < 2 THEN 'High Risk'
+           ELSE 'Medium Risk'
+       END AS AttritionRiskCategory
+FROM Employee
+GROUP BY JobSatisfaction, WorkLifeBalance;
+
+-- Question 5. Find Employee Number with JobInvolvement >= 4 and PerformanceRating < 3.
+
+SELECT EmployeeNumber, JobInvolvement, PerformanceRating
+FROM Employee
+WHERE JobInvolvement >= 4 AND PerformanceRating <= 3;
+
+-- Question 6. Calculate the average PerformanceRating for each year of service (Years at Company) in the company.
+
+SELECT YearsAtCompany, ROUND(AVG(PerformanceRating),2) AS Avg_PerformanceRating
+FROM Employee
+GROUP BY YearsAtCompany
+ORDER BY YearsAtCompany;
+
+-- Question 7. Rank departments based on average JobSatisfaction levels, from highest to lowest.
+
+SELECT Department, ROUND(AVG(JobSatisfaction),2) AS Avg_JobSatisfaction
+FROM Employee
+GROUP BY Department
+ORDER BY Avg_JobSatisfaction DESC;
+
+-- Question 8. Analyze the correlation between EducationField and PerformanceRating.
+
+SELECT EducationField, ROUND(AVG(PerformanceRating),2) AS Avg_PerformanceRating
+FROM Employee
+GROUP BY EducationField;
+
+-- Question 9. Find Employee Number whose PerformanceRating is significantly different from their peers in the same department (outliers).
+
+SELECT EmployeeNumber, PerformanceRating, Department,
+       PERCENT_RANK() OVER(PARTITION BY Department ORDER BY PerformanceRating) AS PerformanceRank
+FROM Employee;
+
+-- Question 10. Calculate the turnover rate (attrition percentage) for each department.
+
+SELECT Department,
+       COUNT(CASE WHEN Attrition = 'Yes' THEN 1 ELSE NULL END) AS AttritionCount,
+       COUNT(*) AS TotalEmployees,
+       (COUNT(CASE WHEN Attrition = 'Yes' THEN 1 ELSE NULL END) / COUNT(*)) * 100 AS AttritionRate
+FROM Employee
+GROUP BY Department;
+
+-- Question 11. Identify employees whose salaries are below the average salary for their department.
+
+SELECT e.EmployeeNumber, e.Department, e.MonthlyIncome
+FROM Employee e
+JOIN (
+    SELECT Department, AVG(MonthlyIncome) AS Avg_Salary
+    FROM Employee
+    GROUP BY Department
+) d ON e.Department = d.Department
+WHERE e.MonthlyIncome < d.Avg_Salary;
+
+-- Question 12. For each job role, find the employee with the highest tenure.
+
+SELECT e.EmployeeNumber, e.JobRole, e.YearsAtCompany
+FROM Employee e
+JOIN (
+    SELECT JobRole, MAX(YearsAtCompany) AS Max_Tenure
+    FROM Employee
+    GROUP BY JobRole
+) j ON e.JobRole = j.JobRole AND e.YearsAtCompany = j.Max_Tenure;
+
+-- To look for the duplicates
+
+SELECT EmployeeID, COUNT(*)
+FROM Employees
+GROUP BY EmployeeID
+HAVING COUNT(*) > 1;
+
+USE HR_Analytics;
+
+SELECT * FROM Employee;
+
+SELECT EmployeeNumber FROM Employee ORDER BY EmployeeNumber ASC;
+
+DELETE FROM Employee WHERE EmployeeNumber = NULL;
+
+-- Check for NULL values in EmployeeID
+SELECT *
+FROM Employees
+WHERE EmployeeID IS NULL;
+
+-- Update NULL values (example of setting them to a unique number)
+UPDATE Employee
+SET EmployeeNumber = (SELECT MAX(EmployeeNumber) + ROW_NUMBER() OVER (ORDER BY (SELECT NULL)))
+WHERE EmployeeNumber IS NULL;
+
+-- Alternatively, you can delete rows with NULL values
+-- DELETE FROM Employees WHERE EmployeeID IS NULL;
+
+-- Add the primary key
+ALTER TABLE Employee
+ADD PRIMARY KEY (EmployeeNumber);
+
+SELECT *
+FROM Employee
+WHERE EmployeeNumber IS NULL;
+
+
+-- TC001: Insert a valid employee record
+
+INSERT INTO Employee (EmployeeNumber, JobSatisfaction, MonthlyIncome, Department, PerformanceRating)
+VALUES (203, 4, 6000, 'Sales', 2);
+
+
+-- TC002: Update an employee's job satisfaction rating
+
+SET SQL_SAFE_UPDATES = 0;
+
+UPDATE Employee
+SET JobSatisfaction = 2.5
+WHERE EmployeeNumber = 203;
+
+-- TC003: Delete an employee record
+
+DELETE FROM Employee
+WHERE EmployeeNumber is NULL;
+
+-- TC004: Attempt to insert an employee with an invalid job satisfaction rating
+
+INSERT INTO Employee (EmployeeNumber, JobSatisfaction, MonthlyIncome, Department, PerformanceRating)
+VALUES (202, 5, 50000, 'HR', 2); 
+-- Should fail if there's a constraint
+
+-- TC005: Ensure non-null constraint on EmployeeNumber
+
+INSERT INTO Employee (EmployeeNumber, JobSatisfaction, MonthlyIncome, Department, PerformanceRating)
+VALUES (NULL, 3, 50000, 'HR', 2); 
+-- Should fail if there's a non-null constraint
+
+ALTER TABLE Employee
+ADD PRIMARY KEY (EmployeeNumber);
+
+-- TC006: Calculate average job satisfaction by department
+
+SELECT Department, AVG(JobSatisfaction) AS AvgJobSatisfaction
+FROM Employee
+GROUP BY Department;
+
+-- TC007: Sum of salaries in each department
+
+SELECT Department, SUM(MonthlyIncome) AS TotalSalaries
+FROM Employee
+GROUP BY Department;
+
+-- TC008: List employees with job satisfaction above 3
+
+SELECT * FROM Employee
+WHERE JobSatisfaction > 3;
+
+-- TC009: Sort employees by tenure in descending order
+
+SELECT * FROM Employee
+ORDER BY YearsAtCompany DESC;
+
+-- TC010: Find employees with salaries below department average
+
+SELECT e.EmployeeNumber, e.MonthlyIncome, e.Department
+FROM Employee e
+WHERE e.MonthlyIncome < (
+    SELECT AVG(MonthlyIncome)
+    FROM Employee
+    WHERE Department = e.Department
+);
+
+-- TC011: Identify departments with the highest average performance rating
+
+SELECT Department
+FROM Employee
+GROUP BY Department
+ORDER BY AVG(PerformanceRating) DESC
+LIMIT 1;
+
+-- TC012: Calculate average tenure by job role using window functions
+
+SELECT JobRole, AVG(YearsAtCompany) OVER (PARTITION BY JobRole) AS AvgTenure
+FROM Employee;
+
+-- TC013: Determine attrition risk based on multiple satisfaction ratings
+
+SELECT EmployeeNumber,
+       CASE
+           WHEN JobSatisfaction <= 2 AND WorkLifeBalance <= 2 AND EnvironmentSatisfaction <= 2 AND JobInvolvement <= 2
+           THEN 'High Risk'
+           ELSE 'Low Risk'
+       END AS AttritionRisk
+FROM Employee;
+
+-- TC014: Measure query execution time for average job satisfaction calculation
+
+EXPLAIN ANALYZE
+SELECT AVG(JobSatisfaction)
+FROM Employee;
+
+-- TC015: Test performance of a join query on a large dataset
+
+EXPLAIN ANALYZE
+SELECT e.EmployeeNumber, e.JobSatisfaction, d.Department
+FROM Employee e
+JOIN Employee d ON e.Department = d.Department;
+
+-- TC016: Insert employee with minimum valid salary
+
+INSERT INTO Employee (EmployeeNumber, JobSatisfaction, MonthlyIncome, Department, PerformanceRating)
+VALUES (203, 2, 0, 'Finance', 2);
+
+-- TC017: Insert employee with maximum valid job satisfaction
+
+ALTER TABLE Employee
+ADD CONSTRAINT chk_MonthlyIncome CHECK (MonthlyIncome >= 0);
+
+
+INSERT INTO Employee (EmployeeNumber, JobSatisfaction, MonthlyIncome, Department, PerformanceRating)
+VALUES (3, 4, 70000, 'IT', 3);
+
+-- TC018: Attempt to insert an employee with a negative salary
+
+INSERT INTO Employee (EmployeeNumber, JobSatisfaction, MonthlyIncome, Department, PerformanceRating)
+VALUES (205, 3, -10000, 'HR', 3); 
+-- Should fail if there's a constraint
+
+-- TC019: Insert an employee with a null job satisfaction rating
+
+SELECT *
+FROM Employee
+WHERE JobSatisfaction IS NULL;
+
+UPDATE Employee
+SET JobSatisfaction = 0
+WHERE JobSatisfaction IS NULL;
+
+ALTER TABLE Employee
+MODIFY JobSatisfaction DECIMAL(1, 0) NOT NULL;
+ 
+
+INSERT INTO Employee (EmployeeNumber, JobSatisfaction, MonthlyIncome, Department, PerformanceRating)
+VALUES (206, NULL, 50000, 'HR', 2); 
+-- Should fail if there's a non-null constraint
+
+-- TC020: Find employees in a specific department with above average salary
+
+SELECT e.EmployeeNumber, e.MonthlyIncome, e.Department
+FROM Employee e
+WHERE e.MonthlyIncome > (
+    SELECT AVG(MonthlyIncome)
+    FROM Employee
+    WHERE Department = 'Sales'
+)
+AND e.Department = 'Sales';
+
+-- TC021: Find the number of employees in each job role
+
+SELECT JobRole, COUNT(*) AS NumberOfEmployees
+FROM Employee
+GROUP BY JobRole;
+
+-- TC022: List employees with highest performance rating in each department
+
+SELECT e.EmployeeNumber, e.Department, e.PerformanceRating
+FROM Employee e
+WHERE e.PerformanceRating = (
+    SELECT MAX(PerformanceRating)
+    FROM Employee
+    WHERE Department = e.Department
+);
+
+-- TC023: Identify employees with job involvement below the average of their department
+
+SELECT e.EmployeeNumber, e.JobInvolvement, e.Department
+FROM Employee e
+WHERE e.JobInvolvement < (
+    SELECT AVG(JobInvolvement)
+    FROM Employee
+    WHERE Department = e.Department
+);
+
+-- TC024: Calculate the percentage of employees with high attrition risk in each department
+
+SELECT Department, 
+       SUM(CASE 
+               WHEN JobSatisfaction <= 2 AND WorkLifeBalance <= 2 AND EnvironmentSatisfaction <= 2 AND JobInvolvement <= 2 
+               THEN 1 
+               ELSE 0 
+           END) * 100.0 / COUNT(*) AS HighAttritionRiskPercentage
+FROM Employee
+GROUP BY Department;
+
+-- TC025: List employees who have been in the same job role for the longest time
+
+SELECT e.EmployeeNumber, e.JobRole, e.YearsAtCompany
+FROM Employee e
+WHERE e.YearsAtCompany = (
+    SELECT MAX(YearsAtCompany)
+    FROM Employee
+    WHERE JobRole = e.JobRole
+);
+
+SET SQL_SAFE_UPDATES = 1;
